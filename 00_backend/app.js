@@ -5,7 +5,7 @@ dotenv.config();
 const mongoose = require("mongoose");
 const express = require("express");
 const path = require("path");
-const multer = require("multer");
+// const multer = require("multer");
 const helmet = require("helmet");
 const file_upload = require("./middleware/file_upload.js");
 const cors = require("cors");

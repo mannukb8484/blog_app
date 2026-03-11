@@ -75,7 +75,7 @@ exports.createPost = async (req, res, next) => {
       imageUrl: imageUrl,
     });
 
-    const result = await post.save();
+    await post.save();
     // s17: before after saving the post, direct send the respponse, but now
     // must connect the post to user, & user to post
     const user = await User.findById(req.userId);
@@ -199,7 +199,7 @@ exports.deletePost = async (req, res, next) => {
       error.statusCode = 403;
       throw error;
     }
-    const result = await Post.findByIdAndDelete(postId); //return a promise so extra .then
+    await Post.findByIdAndDelete(postId);
     await clearImage(post.imageUrl);
     //s19
     // although post is gone, we still have
