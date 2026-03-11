@@ -1,0 +1,17 @@
+{
+    "editor.codeActionsOnSave": {
+        "source.fixAll.eslint": "explicit"
+    },
+    "eslint.validate": [
+        "javascript"
+    ],
+    "eslint.workingDirectories": [
+        "./"
+    ]
+}
+
+/*
+Rename eslint.config.js to eslint.config.mjs.
+The .mjs extension explicitly tells Node and ESLint: 
+"This is an ES Module file, so import is allowed."
+*/
