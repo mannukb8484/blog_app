@@ -7,7 +7,8 @@ const Post = require("../model/post.js");
 const User = require("../model/user.js");
 // const { validationResult } = require("express-validator");
 const { createPostSchema, updatePostSchema } = require("../util/validation.js");
-
+// s19:
+const io = require("../socket.js");
 // s1:getPosts
 exports.getPosts = async (req, res, next) => {
   // s10
@@ -22,6 +23,8 @@ exports.getPosts = async (req, res, next) => {
     // after skip only fetch next "perPage" items
     // we want for next page
     const posts = await Post.find()
+      .populate("creator") //s19
+      .sort({ createdAt: -1 }) //latest post come 1st
       .skip((currentPage - 1) * perPage)
       .limit(perPage);
     res.status(200).json({
@@ -74,7 +77,6 @@ exports.createPost = async (req, res, next) => {
       creator: req.userId,
       imageUrl: imageUrl,
     });
-
     await post.save();
     // s17: before after saving the post, direct send the respponse, but now
     // must connect the post to user, & user to post
@@ -82,6 +84,11 @@ exports.createPost = async (req, res, next) => {
     creator = user;
     user.posts.push(post); //post id adding to the user,by mongoose
     await user.save();
+    //s19:just after save and before sending response,inform all other user using io
+    io.getIO().emit("posts", {
+      action: "create",
+      post: { ...post._doc, creator: { _id: req.userId, name: user.name } },
+    });
     res.status(201).json({
       message: "post successfully created",
       post: post, //post we created and stored in the content
@@ -139,8 +146,8 @@ exports.updatePost = async (req, res, next) => {
       error.statusCode = 422; //wrong data format/valdation error
       throw error;
     }
-
-    const post = await Post.findById(postId);
+    // s20: populate added so we can send whole updated post via socket.io
+    const post = await Post.findById(postId).populate();
     if (!post) {
       const error = new Error("could not find post");
       error.statusCode = 404;
@@ -148,7 +155,9 @@ exports.updatePost = async (req, res, next) => {
     }
     // s18: authorization, compare the user_id from request body sent by isauth and from database
     // entry of current_user
-    if (post.creator.toString() !== req.userId) {
+    // if (post.creator.toString() !== req.userId) {
+    //bcoz of populate it is now full post not only _id
+    if (post.creator._id.toString() !== req.userId) {
       const error = new Error("authorisation failed");
       error.statusCode = 403;
       throw error;
@@ -161,6 +170,8 @@ exports.updatePost = async (req, res, next) => {
     post.content = content;
     post.imageUrl = imageUrl;
     const result = await post.save();
+    // s20:
+    io.getIO().emit("posts", { action: "update", post: result });
     res.status(200).json({ message: "post updated", post: result });
   } catch (err) {
     if (!err.statusCode) {
@@ -208,8 +219,8 @@ exports.deletePost = async (req, res, next) => {
     //s19:we found the user who deleted his post
     //now we update reference of his post in DB using mongoose
     user.posts.pull(postId);
-    const saved_user = await user.save();
-    console.log(saved_user);
+    await user.save();
+    io.getIO().emit("posts", { action: "delete", post: postId });
     res.status(200).json({ message: "deletion successful" });
   } catch (err) {
     if (!err.statusCode) {

@@ -1,27 +1,34 @@
 import js from "@eslint/js";
 import globals from "globals";
+import eslintConfigPrettier from "eslint-config-prettier";
 
 export default [
   {
-    // 1. Tell ESLint which files this config applies to
+    // 1. Target all JavaScript files
     files: ["**/*.js", "**/*.mjs", "**/*.cjs"],
-    
-    // 2. Define the language options explicitly
+
     languageOptions: {
       ecmaVersion: "latest",
-      sourceType: "module", // This allows 'import'
+      // 2. Allow modern 'import' but keep 'require' support
+      sourceType: "module",
       globals: {
         ...globals.node,
-        ...globals.commonjs
-      }
+        ...globals.commonjs, // Essential for 'require' and 'module.exports'
+      },
     },
-    
-    // 3. Use the recommended rules
+
     rules: {
+      // 3. Pull in the baseline "Recommended" rules
       ...js.configs.recommended.rules,
-      "no-console": "off",
-      "no-unused-vars": "warn",
-      "no-undef": "error"
-    }
-  }
+
+      // 4. Logic & Bug Prevention
+      "no-unused-vars": "warn", // Warn if variable is defined but not used
+      "no-undef": "error", // Error if variable is used but not defined
+      "no-console": "off", // Allow console.log for backend debugging
+      "no-const-assign": "error", // Error if you try to change a 'const'
+      "no-duplicate-imports": "error", // Error if you import same file twice
+    },
+  },
+  // 5. The Peacekeeper (Must be last)
+  eslintConfigPrettier,
 ];

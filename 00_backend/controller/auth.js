@@ -2,9 +2,7 @@
 const User = require("../model/user.js");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
-// const { validationResult } = require("express-validator");
 const { loginSchema, signUpSchema } = require("../util/validation.js");
-
 exports.signUp = async (req, res, next) => {
   try {
     const { error, value } = signUpSchema.validate(req.body, {
@@ -88,7 +86,7 @@ exports.login = async (req, res, next) => {
       },
       // config:
       process.env.SECRET,
-      { expiresIn: process.env.EXPIARY }, //.env for multile places uses
+      { expiresIn: process.env.EXPIRY }, //.env for multile places uses
     );
     res.status(200).json({ token: token, userId: found_user._id.toString() });
   } catch (err) {

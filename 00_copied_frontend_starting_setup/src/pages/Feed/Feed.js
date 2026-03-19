@@ -1,4 +1,6 @@
 import React, { Component, Fragment } from "react";
+// s19
+import openSocket from "socket.io-client";
 
 import Post from "../../components/Feed/Post/Post";
 import Button from "../../components/Button/Button";
@@ -35,7 +37,51 @@ class Feed extends Component {
       .catch(this.catchError);
 
     this.loadPosts();
+    // s19: see the backend data sent aq that accesss it
+    // during c_back of socket.on, and use same channel
+    // name as backend here on socket.on
+    const socket = openSocket("http://localhost:8080");
+    socket.on("posts", (data) => {
+      if (data.action === "create") {
+        this.addPost(data.post);
+      } else if (data.action === "update") {
+        this.updatePost(data.post);
+      } else if (data.action === "delete") {
+        //just old function not created new unlike create && edit
+        this.loadPosts();
+      }
+    });
   }
+  // s19: extra function for socket
+  addPost = (post) => {
+    this.setState((prevState) => {
+      const updatedPosts = [...prevState.posts];
+      if (prevState.postPage === 1) {
+        if (updatedPosts.length >= 2) {
+          updatedPosts.pop();
+        }
+        // updatedPosts.pop();
+        updatedPosts.unshift(post);
+      }
+      return {
+        posts: updatedPosts,
+        totalPosts: prevState.totalPosts + 1,
+      };
+    });
+  };
+  // s20: edit function for socket
+  updatePost = (post) => {
+    this.setState((prevState) => {
+      const updatedPosts = [...prevState.posts];
+      const updatePostIndex = updatedPosts.findIndex((p) => p._id === post._id);
+      if (updatePostIndex > -1) {
+        updatedPosts[updatePostIndex] = post;
+      }
+      return {
+        posts: updatedPosts,
+      };
+    });
+  };
 
   loadPosts = (direction) => {
     if (direction) {
@@ -166,18 +212,26 @@ class Feed extends Component {
           createdAt: resData.post.createdAt,
         };
         this.setState((prevState) => {
-          let updatedPosts = [...prevState.posts];
-          if (prevState.editPost) {
-            //Again checking:Are we editing?
-            const postIndex = prevState.posts.findIndex(
-              (p) => p._id === prevState.editPost._id,
-            );
-            updatedPosts[postIndex] = post;
-          } else if (prevState.posts.length < 2) {
-            updatedPosts = prevState.posts.concat(post);
-          }
+          // s20:updated posts emmited via socket
+
+          // let updatedPosts = [...prevState.posts];
+          // if (prevState.editPost) {
+          //   //Again checking:Are we editing?
+          //   const postIndex = prevState.posts.findIndex(
+          //     (p) => p._id === prevState.editPost._id,
+          //   );
+          //   updatedPosts[postIndex] = post;
+          // }
+
+          // S19:
+          // emit sends to itself as well,and original
+          // react code also render new post hence on the host side
+          // same post renderd twice,hence stop original rendering for newly created post
+          // else if (prevState.posts.length < 2) {
+          //   updatedPosts = prevState.posts.concat(post);
+          // }
           return {
-            posts: updatedPosts,
+            // posts: updatedPosts, //s20
             isEditing: false,
             editPost: null,
             editLoading: false,
@@ -218,10 +272,16 @@ class Feed extends Component {
       })
       .then((resData) => {
         console.log(resData);
-        this.setState((prevState) => {
-          const updatedPosts = prevState.posts.filter((p) => p._id !== postId);
-          return { posts: updatedPosts, postsLoading: false };
-        });
+        // s21: delete socket-io
+        // this.setState((prevState) => {
+        //   const updatedPosts = prevState.posts.filter((p) => p._id !== postId);
+        //   return { posts: updatedPosts, postsLoading: false };
+        // });
+
+        //s21: comment all above logic an dsimply call loadpost()
+        //SOCKET DOES IT FOR HOST AS WELL USING EMIT SO NO NEED HERE,
+        //STILL SO MESSAGE DISSAPEAR FROM HOST MACHINE AT SPEED
+        this.loadPosts();
       })
       .catch((err) => {
         console.log(err);
